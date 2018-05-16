@@ -1,6 +1,7 @@
 import requests
 import json
 import pandas as pd
+import sqlite3
 
 def save_json(data, fname):
   with open(fname, 'w') as fname:
@@ -12,7 +13,6 @@ def get_json(url, fname=None):
     try:
       with open(fname, 'r') as f:
         data = json.load(f)
-        data = data['data']
         return data
     except:
       print(f'No file named {fname} found. Fetching data from {url}')
@@ -21,12 +21,11 @@ def get_json(url, fname=None):
     headers = {'user-agent': 'Chrome'}
     r = requests.get(url, headers=headers)
     data = r.json()
-    data = data['data']
     return data
 
 def pretty_print(data):
   counter = 0
-  for item in data['children']:
+  for item in data['data']['children']:
     counter += 1
     print("Post Title:", item['data']['title'],
           "\nComments:", item['data']['num_comments'],
@@ -54,15 +53,40 @@ def json_to_dataframe(data):
   
   return df
 
+def get_urls(conn=None, df=None):
+  '''Gets songs from either a df or the sqlite db'''
+  
+  if conn is not None:
+    c = conn.cursor()
+    c.execute('select `url` from songs')
+    results = c.fetchall()
+    results = [result[0] for result in results]
+    return results
+  elif df is not None:
+    return list(df['URL'])
+  else:
+    return []
+
 def main():
   url = 'https://www.reddit.com/r/listentothis/new.json'
   fname = 'r-listentothis_new.json'
   
   data = get_json(fname=fname, url=url)
-  save_json(data, fname)
+  # save_json(data, fname)
   df = json_to_dataframe(data)
-  print(df.head())
   # pretty_print(data)
+
+  sqlite_file = 'spice_of_life.db'    # name of the sqlite database file
+
+  # Inserting Data into Database
+  conn = sqlite3.connect(sqlite_file)
+  c = conn.cursor()
+  df.to_sql('songs', conn, if_exists='replace', index=False)
+  print(get_urls(conn=conn))
+
+  # Committing changes and closing the connection to the database file
+  conn.commit()
+  conn.close()
 
 if __name__ == '__main__':
   main()

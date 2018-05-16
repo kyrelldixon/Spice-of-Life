@@ -10,10 +10,12 @@ import requests
 import pandas as pd
 
 def save_json(data, fname):
+  '''Saves json to a file'''
   with open(fname, 'w') as fname:
     json.dump(data, fname, sort_keys=True, indent=2)
 
 def get_json(url, fname=None):
+  '''Gets json from file or requests from url'''
   if fname != None:
     try:
       with open(fname, 'r') as f:
@@ -29,6 +31,7 @@ def get_json(url, fname=None):
     return data
 
 def pretty_print(data):
+  '''Prints out data nicely formatted'''
   counter = 0
   for item in data['data']['children']:
     counter += 1
@@ -43,6 +46,7 @@ def pretty_print(data):
   print("Number of titles: ", counter)
 
 def json_to_dataframe(data):
+  '''Extracts most relevant data from json and stores in a Dataframe'''
   df_data = []
   for item in data['children']:
     post_title = item['data']['title']
@@ -78,6 +82,7 @@ def download(url, output_dir=None):
     subprocess.call(args, shell=True)
 
 def main():
+  '''Runs the script'''
   url = 'https://www.reddit.com/r/listentothis/new.json'
   fname = 'r-listentothis_new.json'
 

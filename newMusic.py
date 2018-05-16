@@ -1,20 +1,25 @@
-import requests
+'''
+This application requires you to have youtube-dl installed in order to
+actually download songs. Otherwise, it just stores the songs
+'''
+
 import json
-import pandas as pd
 import sqlite3
+import subprocess
+import requests
+import pandas as pd
 
 def save_json(data, fname):
   with open(fname, 'w') as fname:
     json.dump(data, fname, sort_keys=True, indent=2)
 
 def get_json(url, fname=None):
-  
   if fname != None:
     try:
       with open(fname, 'r') as f:
         data = json.load(f)
         return data
-    except:
+    except IOError:
       print(f'No file named {fname} found. Fetching data from {url}')
 
   if url != None:
@@ -32,7 +37,7 @@ def pretty_print(data):
           "\nURL:", item['data']['url'],
           "\nScore:", item['data']['score'],
           "\nVideo Title:", item['data']['media']['oembed']['title'],
-          )
+         )
     print("----")
 
   print("Number of titles: ", counter)
@@ -50,12 +55,10 @@ def json_to_dataframe(data):
 
   col_names = ['Post Title', 'Comments', 'URL', 'Score', 'Video Title']
   df = pd.DataFrame(df_data, columns=col_names)
-  
   return df
 
 def get_urls(conn=None, df=None):
   '''Gets songs from either a df or the sqlite db'''
-  
   if conn is not None:
     c = conn.cursor()
     c.execute('select `url` from songs')
@@ -67,12 +70,18 @@ def get_urls(conn=None, df=None):
   else:
     return []
 
+def download(url, output_dir=None):
+    '''Downloads youtube audio as mp3'''
+    if output_dir is None:
+      output_dir = "'./songs/%(title)s.%(ext)s'"
+    args = f'youtube-dl -x --audio-format mp3 {url} -o {output_dir}'
+    subprocess.call(args, shell=True)
+
 def main():
   url = 'https://www.reddit.com/r/listentothis/new.json'
   fname = 'r-listentothis_new.json'
-  
+
   data = get_json(fname=fname, url=url)
-  # save_json(data, fname)
   df = json_to_dataframe(data)
   # pretty_print(data)
 
@@ -82,10 +91,11 @@ def main():
   conn = sqlite3.connect(sqlite_file)
   c = conn.cursor()
   df.to_sql('songs', conn, if_exists='replace', index=False)
-  print(get_urls(conn=conn))
+  urls = get_urls(conn=conn)
 
   # Committing changes and closing the connection to the database file
   conn.commit()
+  c.close()
   conn.close()
 
 if __name__ == '__main__':

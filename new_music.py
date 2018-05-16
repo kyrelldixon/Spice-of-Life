@@ -64,16 +64,14 @@ def json_to_dataframe(data):
   df = pd.DataFrame(df_data, columns=col_names)
   return df
 
-def get_urls(conn=None, df=None):
-  '''Gets songs from either a df or the sqlite db'''
+def get_db_urls(conn):
+  '''Gets songs from the sqlite db'''
   if conn is not None:
     c = conn.cursor()
     c.execute('select `url` from songs')
     results = c.fetchall()
     results = [result[0] for result in results]
     return results
-  elif df is not None:
-    return list(df['URL'])
   else:
     return []
 
@@ -101,8 +99,7 @@ def extract_artist(video_title):
     return None
 
   artist = " ".join(video_title.split('-')[0].split())
-  return artist
-  
+  return artist  
 
 def main():
   '''Runs the script'''
@@ -113,15 +110,12 @@ def main():
   df = json_to_dataframe(data)
   # pretty_print(data)
 
-  sqlite_file = 'spice_of_life.db'    # name of the sqlite database file
+  sqlite_file = 'spice_of_life.db'
 
   # Inserting Data into Database
   conn = sqlite3.connect(sqlite_file)
   c = conn.cursor()
-  df.to_sql('songs', conn, if_exists='replace', index=False)
-  
-  # Extracts the artist from the song title
-  print(df.head())
+  df.to_sql('songs', conn, if_exists='replace', index=False) # replacing for now, but I may want to append
 
   # Committing changes and closing the connection to the database file
   conn.commit()

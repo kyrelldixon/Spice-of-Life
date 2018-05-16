@@ -54,10 +54,13 @@ def json_to_dataframe(data):
     url = item['data']['url']
     score = item['data']['score']
     video_title = item['data']['media']['oembed']['title']
+    artist = extract_artist(video_title)
+    provider = item['data']['media']['oembed']['provider_name']
+    song_title = extract_song_title(video_title)
 
-    df_data.append([post_title, num_comments, url, score, video_title])
+    df_data.append([post_title, num_comments, url, score, video_title, song_title, artist, provider])
 
-  col_names = ['Post Title', 'Comments', 'URL', 'Score', 'Video Title']
+  col_names = ['Post Title', 'Comments', 'URL', 'Score', 'Video Title', 'Song Title', 'Artist', 'Provider']
   df = pd.DataFrame(df_data, columns=col_names)
   return df
 
@@ -81,6 +84,26 @@ def download(url, output_dir=None):
     args = f'youtube-dl -x --audio-format mp3 {url} -o {output_dir}'
     subprocess.call(args, shell=True)
 
+def extract_song_title(video_title):
+  '''Uses black magic to extract song title from video title'''
+  if '-' not in video_title:
+    return video_title
+  
+  # Split on hyphen gets the song part. The second split
+  # makes a list containing each word. The " ".join puts
+  # the word back together with a space in between
+  song_title = " ".join(video_title.split('-')[1].split())
+  return song_title
+
+def extract_artist(video_title):
+  '''Extracts artist from video title if artist is present'''
+  if '-' not in video_title:
+    return None
+
+  artist = " ".join(video_title.split('-')[0].split())
+  return artist
+  
+
 def main():
   '''Runs the script'''
   url = 'https://www.reddit.com/r/listentothis/new.json'
@@ -96,7 +119,9 @@ def main():
   conn = sqlite3.connect(sqlite_file)
   c = conn.cursor()
   df.to_sql('songs', conn, if_exists='replace', index=False)
-  urls = get_urls(conn=conn)
+  
+  # Extracts the artist from the song title
+  print(df.head())
 
   # Committing changes and closing the connection to the database file
   conn.commit()
